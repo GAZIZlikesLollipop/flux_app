@@ -1,0 +1,46 @@
+import 'dart:io';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'user_model.dart';
+
+part 'app_database.g.dart';
+
+@DriftDatabase(tables: [Users, Chats, Messages, Members])
+class AppDatabase extends _$AppDatabase {
+  AppDatabase() : super(_openConnection());
+  Future<List<UserDTO>> get allUsers {
+    final query = select(messages).join([
+      innerJoin(chats,chats.id.equalsExp(messages.chatId)),
+      innerJoin(users,users.id.equalsExp(chats.userId))
+    ]);
+    final membersData = select(members).get();
+    final fuck = query.map((row) {
+      final User user = row.readTable(users);
+      final Chat chat = row.readTable(chats);
+      final 
+      List<ChatDTO> userChats;
+      return UserDTO(
+        id: user.id, 
+        name: user.name, 
+        lastOnline: user.lastOnline, 
+        avatarPath: user.avatarPath, 
+        chats: row.readTable(chats)
+      );
+    }).get();
+    return fuck;
+  }
+  Future<int> createUser(User user) => into(users).insert(user);
+  
+  @override
+  int get schemaVersion => 1;
+}
+
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dbFolder.path, 'chat_db.sqlite'));
+    return NativeDatabase(file);
+  });
+}
