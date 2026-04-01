@@ -12,11 +12,11 @@ class Users extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DataClassName('Member')
-class Members extends Table {
+@DataClassName('Chat')
+class Chats extends Table {
   TextColumn get id => text()();
-  IntColumn get chatId => integer().references(Chats, #id).unique()();
-  TextColumn get name => text()();
+  TextColumn get userId => text().references(Users, #id)(); 
+  TextColumn get title => text()();
   DateTimeColumn get lastOnline => dateTime()();
   TextColumn get avatarPath => text()();
 
@@ -24,16 +24,10 @@ class Members extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DataClassName('Chat')
-class Chats extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get userId => text().references(Users, #id)(); 
-}
-
 @DataClassName('Message')
 class Messages extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get chatId => integer().references(Chats, #id)(); 
+  TextColumn get chatId => text().references(Chats, #id)(); 
   TextColumn get content => text()();
   BoolColumn get isReaded => boolean()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -55,16 +49,38 @@ class UserDTO {
 }
 
 class ChatDTO {
-  final int id;
-  final int userId;
-  final Member member;
+  final String id;
+  final String userId;
+  final String title;
+  final DateTime lastOnline;
+  final String avatarPath;
   final List<Message> messages;
   const ChatDTO({
     required this.id,
     required this.userId,
-    required this.messages,
-    required this.member,
+    required this.title,
+    required this.lastOnline,
+    required this.avatarPath,
+    required this.messages
   });
-  String get avatarPath => member.avatarPath;
-  String get title => member.name;
+
+  Message get lastMessage => 
+    messages.isEmpty ? Message(
+        id: 0, 
+        chatId: id, 
+        content: 'No messages yet', 
+        isReaded: false, 
+        createdAt: DateTime.now()
+      ) 
+      : messages[messages.length-1];
+
+  int get unreadMessages { 
+    int readed = 0;
+    if(messages.isNotEmpty){
+      for(final msg in messages){
+        if(msg.isReaded) readed++;
+      }
+    }
+    return readed;
+  }
 }

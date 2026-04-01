@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/database/app_database.dart';
+import 'package:flux_app/core/database/user_model.dart';
 
 class ChatScreen extends StatelessWidget {
-  final Chat chatInfo ;
+  final ChatDTO chatInfo;
   const ChatScreen({
     super.key,
     required this.chatInfo
@@ -29,7 +29,7 @@ class ChatScreen extends StatelessWidget {
                ClipRRect(
                 borderRadius: BorderRadius.circular(50),
                 child: Image.network(
-                  chatInfo.imageURL,
+                  chatInfo.avatarPath,
                   fit: BoxFit.cover,
                 ),
               )

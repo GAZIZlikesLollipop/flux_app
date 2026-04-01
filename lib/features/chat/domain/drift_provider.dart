@@ -5,27 +5,43 @@ import 'package:uuid/uuid.dart';
 
 class DriftProider extends ChangeNotifier {
   final AppDatabase db; 
-  DriftProider({required this.db});
+  DriftProider({required this.db}){
+    loadUser();
+  }
   UserDTO? _user;
   UserDTO? get user => _user; 
-
-  void createUser(
-    String userName,
-    String avatarPath
-  ) async {
+  void loadUser() async {
     final User temp = 
       User(
         id: Uuid().v4(),
-        name: userName,
+        name: 'fine',
         lastOnline: DateTime.now(),
-        avatarPath: avatarPath,
+        avatarPath: "https://images.unsplash.com/photo-1481349518771-20055b2a7b24?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHJhbmRvbXxlbnwwfHwwfHx8MA%3D%3D",
       );
-    await db.createUser(temp);
-    notifyListeners();
-  }
-  void loadUser() async {
-    final users = await db.allUsers;
-    _user = users[0];
+    print(await db.createUser(temp));
+    final user = await db.getUser;
+    print(await db.createChatMessages(user.id));
+    List<ChatDTO> chatsData = List.empty();
+    for(var chat in await db.getChats) {
+      final List<Message> messages = await db.getChatMessages(chat.id);
+      chatsData.add(
+        ChatDTO(
+          id: chat.id, 
+          userId: chat.userId, 
+          title: chat.title, 
+          lastOnline: chat.lastOnline, 
+          avatarPath: chat.avatarPath, 
+          messages: messages
+        )
+      );
+    }
+    _user = UserDTO(
+      id: user.id, 
+      name: user.name, 
+      lastOnline: user.lastOnline, 
+      avatarPath: user.avatarPath, 
+      chats: chatsData
+    );
     notifyListeners();
   }
 }

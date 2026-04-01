@@ -3,36 +3,37 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
 import 'user_model.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Users, Chats, Messages, Members])
+@DriftDatabase(tables: [Users, Chats, Messages])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
-  Future<List<UserDTO>> get allUsers {
-    final query = select(messages).join([
-      innerJoin(chats,chats.id.equalsExp(messages.chatId)),
-      innerJoin(users,users.id.equalsExp(chats.userId))
-    ]);
-    final membersData = select(members).get();
-    final fuck = query.map((row) {
-      final User user = row.readTable(users);
-      final Chat chat = row.readTable(chats);
-      final 
-      List<ChatDTO> userChats;
-      return UserDTO(
-        id: user.id, 
-        name: user.name, 
-        lastOnline: user.lastOnline, 
-        avatarPath: user.avatarPath, 
-        chats: row.readTable(chats)
-      );
-    }).get();
-    return fuck;
-  }
+  Future<User> get getUser => select(users).getSingle(); 
+  Future<List<Chat>> get getChats => select(chats).get(); 
+  Future<List<Message>> getChatMessages(String chatId) => (select(messages)..where((tbl) => tbl.chatId.equals(chatId))).get(); 
   Future<int> createUser(User user) => into(users).insert(user);
-  
+  Future<int> createChatMessages(String userId) async {
+    final chatId = Uuid().v4();
+    Message message = Message(
+      id: 0, 
+      chatId: chatId, 
+      content: 'Hello!', 
+      isReaded: false, 
+      createdAt: DateTime.now()
+    );
+    Chat chat = Chat(
+      id: chatId, 
+      userId: userId, 
+      title: 'first', 
+      lastOnline: DateTime.now().subtract(Duration(minutes: 30)), 
+      avatarPath: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6nWrDmTZ5-h_wOryw8-CnXnOjuitgTOaHFg&s', 
+    );
+    await into(chats).insert(chat);
+    return into(messages).insert(message);
+  }
   @override
   int get schemaVersion => 1;
 }

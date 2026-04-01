@@ -3,8 +3,8 @@ import '../../../../core/database/user_model.dart';
 import '../pages/chat_page.dart';
 
 class ChatCard extends StatelessWidget {
-  final Chat chatInfo;
   final bool isDivider;
+  final ChatDTO chatInfo;
   const ChatCard({
     super.key,
     required this.chatInfo,
@@ -40,7 +40,7 @@ class ChatCard extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(50),
                         child: Image.network(
-                          chatInfo.imageURL,
+                          chatInfo.avatarPath,
                           fit: BoxFit.cover,
                         ),
                       )
@@ -60,7 +60,7 @@ class ChatCard extends StatelessWidget {
                     Column(
                       children: [
                         Text(
-                          "${chatInfo.lastMessage.date.hour < 10 ? 0 : ""}${chatInfo.lastMessage.date.hour}:${chatInfo.lastMessage.date.minute < 10 ? 0 : ""}${chatInfo.lastMessage.date.minute}",
+                          "${chatInfo.lastMessage.createdAt.hour < 10 ? 0 : ""}${chatInfo.lastMessage.createdAt.hour}:${chatInfo.lastMessage.createdAt.minute < 10 ? 0 : ""}${chatInfo.lastMessage.createdAt.minute}",
                           style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75))
                         ),
                         SizedBox(height: 4),
