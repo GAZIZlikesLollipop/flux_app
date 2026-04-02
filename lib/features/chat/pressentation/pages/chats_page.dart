@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flux_app/features/chat/domain/drift_provider.dart';
+import 'package:flux_app/core/database/drift_provider.dart';
 import 'package:provider/provider.dart';
 import '../widgets/chat_card.dart';
 

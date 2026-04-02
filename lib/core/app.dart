@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../features/chat/pressentation/pages/chats_page.dart';
+import 'package:flux_app/features/auth/pressentation/auth_page.dart';
 import 'theme.dart';
 
 class MainApp extends StatelessWidget {
@@ -7,7 +7,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: ChatListScreen(),
+      home: AuthPage(),
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,

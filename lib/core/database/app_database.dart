@@ -11,7 +11,7 @@ part 'app_database.g.dart';
 @DriftDatabase(tables: [Users, Chats, Messages])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
-  Future<User> get getUser => select(users).getSingle(); 
+  Future<List<User>> get getUsers => select(users).get(); 
   Future<List<Chat>> get getChats => select(chats).get(); 
   Future<List<Message>> getChatMessages(String chatId) => (select(messages)..where((tbl) => tbl.chatId.equals(chatId))).get(); 
   Future<int> createUser(User user) => into(users).insert(user);
