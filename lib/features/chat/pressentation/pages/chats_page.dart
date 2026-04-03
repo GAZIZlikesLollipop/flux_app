@@ -24,20 +24,39 @@ class ChatListScreen extends StatelessWidget {
         ],
         backgroundColor: theme.scaffoldBackgroundColor,
       ),
-      body: user != null ? ListView.builder(
-        itemCount: user.chats.length,
-        itemBuilder: (context, index) {
-          return ChatCard(chatInfo: user.chats[index]);
-        }
-      ): Center(
-        child: Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.5),
-          child: Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('No chats yet. Add your first one!')
+      body: Stack(
+        children: [
+          user != null ? ListView.builder(
+            itemCount: user.chats.length,
+            itemBuilder: (context, index) {
+              return ChatCard(chatInfo: user.chats[index]);
+            }
+          ): Center(
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.5),
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: Text('No chats yet. Add your first one!')
+              )
+            )
+          ),
+          Container(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: EdgeInsetsGeometry.all(16),
+              child: ElevatedButton(
+                onPressed: (){}, 
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                ),
+                child: Icon(Icons.add)
+              )
+            )
           )
-        )
+        ]
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
     );
