@@ -18,8 +18,9 @@ class AuthPageState extends State<AuthPage> {
   @override
   void initState(){
     super.initState();
-    context.read<DriftProider>().isRegistered().then((val) {
-      if(val) {
+    WidgetsBinding.instance.addPostFrameCallback((_)async{
+      if(await context.read<DriftProider>().isRegistered()) {
+        await context.read<DriftProider>().loadUser();
         Navigator.push(context, MaterialPageRoute(builder: (_) => ChatListScreen()));
       }
     });

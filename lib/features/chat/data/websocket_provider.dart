@@ -8,7 +8,7 @@ class WebsocketProvider extends ChangeNotifier {
   WebSocketChannel? channel;  
   void initChannel(String userId) {
     channel = IOWebSocketChannel.connect(
-      Uri.parse(String.fromEnvironment('BASE_URL',defaultValue: 'ws://localhost:8080')),
+      Uri.parse(String.fromEnvironment('BASE_URL',defaultValue: 'ws://127.0.0.1:8080')),
       headers: { 'User-Id': userId }
     );
   }

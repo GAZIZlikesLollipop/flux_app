@@ -32,7 +32,7 @@ class DriftProider extends ChangeNotifier {
     );
     return userId;
   }
-  void loadUser() async {
+  Future<String> loadUser() async {
     List<User> users = (await db.getUsers);
     late User userData = users[0];
     List<ChatDTO> chatsData = List.empty(growable: true);
@@ -57,5 +57,6 @@ class DriftProider extends ChangeNotifier {
       chats: chatsData
     );
     notifyListeners();
+    return userData.id;
   }
 }
