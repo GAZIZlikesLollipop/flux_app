@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flux_app/core/database/drift_provider.dart';
+import 'package:flux_app/features/chat/data/api_models.dart';
 import 'package:flux_app/features/chat/data/websocket_provider.dart';
 import 'package:provider/provider.dart';
 import '../widgets/chat_card.dart';
@@ -82,10 +83,18 @@ class ChatListState extends State<ChatListScreen> {
                     context: context, 
                     isScrollControlled: true,
                     builder: (BuildContext ctx) {
-                      return Padding(
-                        padding: EdgeInsetsGeometry.symmetric(horizontal: 24),
+                      final Size size = MediaQuery.of(ctx).size;
+                      return 
+                      StatefulBuilder(
+                        builder:(ctx, setState) => Padding(
+                        padding: EdgeInsetsGeometry.directional(
+                          start: 24,
+                          end:  24,
+                          bottom: MediaQuery.of(ctx).viewInsets.bottom+16
+                        ),
                         child: Column(
                           spacing: 12,
+                          mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.end,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -138,12 +147,15 @@ class ChatListState extends State<ChatListScreen> {
                                   )
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  user.id,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textStyle.bodyLarge?.copyWith(
-                                    color: colorScheme.onSurface.withValues(alpha: 0.4)
-                                  )
+                                SizedBox(
+                                  width: size.width > size.height ? size.height/2 : size.width/2,
+                                  child: Text(
+                                    user.id,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: textStyle.bodyLarge?.copyWith(
+                                      color: colorScheme.onSurface.withValues(alpha: 0.4)
+                                    ),
+                                  ),
                                 ),
                                 Spacer(),
                                 OutlinedButton(
@@ -176,22 +188,20 @@ class ChatListState extends State<ChatListScreen> {
                                       Expanded(
                                         child: ElevatedButton(
                                           onPressed: !isClicked ? () {
-
                                             setState(() => isClicked = true);
-                                            try{
-                                              ctx.read<WebsocketProvider>().channel?.stream.listen(
-                                                (data){
-                                                  print(data);
-                                                  setState(() => isClicked = false);
-                                                  if(ctx.mounted) {
-                                                    Navigator.pop(ctx);
-                                                  }
-                                                } 
-                                              ); 
-                                              print("Все прошло успешно");
-                                            } catch (e, stackTrace) {
-                                              throw Exception("$e: $stackTrace");
-                                            } 
+                                            // try{
+                                            //   ctx.read<WebsocketProvider>().sendData(Request(receiverID: userIdController.text, data: Uint8List.fromList([71, 97, 122, 105, 122])).toJson()); 
+                                            //   await for(final Uint8List data in ctx.read<WebsocketProvider>().channel!.stream) {
+                                            //     setState(() => isClicked = true);
+                                            //     print(data.toString());
+                                            //     setState(() => isClicked = false);
+                                            //     if(ctx.mounted) {
+                                            //       Navigator.pop(ctx);
+                                            //     }
+                                            //   }
+                                            // } catch (e, stackTrace) {
+                                            //   throw Exception("$e: $stackTrace");
+                                            // } 
 
                                           } : null, 
                                           child: Text('Start chat')
@@ -214,6 +224,7 @@ class ChatListState extends State<ChatListScreen> {
                             )
                           ],
                         )
+                      ),
                       );
                     }
                   );

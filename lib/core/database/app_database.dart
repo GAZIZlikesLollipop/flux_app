@@ -14,6 +14,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Chat>> get getChats => select(chats).get(); 
   Future<List<Message>> getChatMessages(String chatId) => (select(messages)..where((tbl) => tbl.chatId.equals(chatId))).get(); 
   Future<int> createUser(User user) => into(users).insert(user);
+  Future<int> createChat(Chat chat) => into(chats).insert(chat);
   @override
   int get schemaVersion => 1;
 }
