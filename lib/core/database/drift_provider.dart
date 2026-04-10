@@ -1,3 +1,4 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flux_app/core/database/user_model.dart';
 import 'app_database.dart';
@@ -58,5 +59,14 @@ class DriftProider extends ChangeNotifier {
     );
     notifyListeners();
     return userData.id;
+  }
+  Future<int?> createNewChat(Chat chat) async {
+    int? result;
+    try {
+      result = await db.createChat(chat);
+    } on SqliteException catch(_) {
+      result = null;
+    }
+    return result;
   }
 }

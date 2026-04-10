@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flux_app/core/database/drift_provider.dart';
 import 'package:flux_app/features/chat/data/api_models.dart';
 import 'package:flux_app/features/chat/data/websocket_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../widgets/chat_card.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -16,6 +19,7 @@ class ChatListState extends State<ChatListScreen> {
   final userIdController = TextEditingController();
   final FocusNode userIdFocuseNode = FocusNode();
   bool isClicked = false;
+  ConnectionError? newChatError;
   @override
   void initState() {
     super.initState();
@@ -24,7 +28,7 @@ class ChatListState extends State<ChatListScreen> {
       if(userId != null){
         context.read<WebsocketProvider>().initChannel(userId);
       } else {
-        throw Exception("User id = null");
+        throw Exception("User id is null");
       }
     });
   }
@@ -84,147 +88,173 @@ class ChatListState extends State<ChatListScreen> {
                     isScrollControlled: true,
                     builder: (BuildContext ctx) {
                       final Size size = MediaQuery.of(ctx).size;
-                      return 
-                      StatefulBuilder(
-                        builder:(ctx, setState) => Padding(
-                        padding: EdgeInsetsGeometry.directional(
-                          start: 24,
-                          end:  24,
-                          bottom: MediaQuery.of(ctx).viewInsets.bottom+16
-                        ),
-                        child: Column(
-                          spacing: 12,
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'New chat',
-                                  style: textStyle.titleMedium
-                                ),
-                                Text(
-                                  'Paste or type the person\'s ID below',
-                                  style: textStyle.labelLarge?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5))
-                                ),
-                              ]
+                      return StatefulBuilder(
+                        builder:(context, setState) { 
+                          userIdFocuseNode.addListener((){
+                            if(!context.mounted){
+                              userIdFocuseNode.removeListener((){});
+                            }
+                            setState((){});
+                          });
+                          return Padding(
+                            padding: EdgeInsetsGeometry.directional(
+                              start: 24,
+                              end:  24,
+                              bottom: MediaQuery.of(context).viewInsets.bottom+16
                             ),
-                            TextField(
-                              autofocus: true,
-                              decoration: InputDecoration(
-                                hint: Text(
-                                  'Paste ID here…',
-                                  style: textStyle.labelLarge?.copyWith(
-                                    color: userIdFocuseNode.hasFocus ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.75)
-                                  )
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.search,
-                                  color: userIdFocuseNode.hasFocus ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.75)
-                                ),
+                            child: Column(
+                            spacing: 12,
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'New chat',
+                                    style: textStyle.titleMedium
+                                  ),
+                                  Text(
+                                    'Paste or type the person\'s ID below',
+                                    style: textStyle.labelLarge?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5))
+                                  ),
+                                ]
                               ),
-                              focusNode: userIdFocuseNode,
-                              controller: userIdController,
-                            ),
-                            const Divider(),
-                            Text(
-                              'Your ID — share this with others so they can find you',
-                              style: textStyle.labelLarge?.copyWith(
-                                color: colorScheme.onSurface.withValues(alpha: 0.75)
-                              )
-                            ),
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  maxRadius: 16,
-                                  backgroundColor: colorScheme.tertiaryContainer,
-                                  foregroundColor: colorScheme.onTertiaryContainer.withValues(alpha: 0.75),
-                                  child: Icon(
-                                    Icons.person_outline,
-                                    size: 20
-                                  )
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: size.width > size.height ? size.height/2 : size.width/2,
-                                  child: Text(
-                                    user.id,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: textStyle.bodyLarge?.copyWith(
-                                      color: colorScheme.onSurface.withValues(alpha: 0.4)
-                                    ),
-                                  ),
-                                ),
-                                Spacer(),
-                                OutlinedButton(
-                                  onPressed: () => Clipboard.setData(ClipboardData(text: user.id)),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: colorScheme.onSurface.withValues(alpha: 0.5),
-                                    textStyle:  textStyle.labelSmall,
-                                    padding: EdgeInsets.zero
-                                  ),
-                                  child: Row(
-                                    spacing: 3,
+                              TextField(
+                                autofocus: true,
+                                onChanged: (_) => setState((){}),
+                                decoration: InputDecoration(
+                                  error: newChatError != null ? Row(
+                                    spacing: 5,
                                     children: [
                                       Icon(
-                                        Icons.copy,
+                                        Icons.error_outline,
+                                        color: colorScheme.error,
                                         size: 14,
                                       ),
-                                      Text('Copy')
-                                    ]
-                                  )
-                                )
-                              ],
-                            ),
-                            Container(
-                              alignment: Alignment.bottomCenter,
-                              child: Column(
-                                spacing: 6,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: !isClicked ? () {
-                                            setState(() => isClicked = true);
-                                            // try{
-                                            //   ctx.read<WebsocketProvider>().sendData(Request(receiverID: userIdController.text, data: Uint8List.fromList([71, 97, 122, 105, 122])).toJson()); 
-                                            //   await for(final Uint8List data in ctx.read<WebsocketProvider>().channel!.stream) {
-                                            //     setState(() => isClicked = true);
-                                            //     print(data.toString());
-                                            //     setState(() => isClicked = false);
-                                            //     if(ctx.mounted) {
-                                            //       Navigator.pop(ctx);
-                                            //     }
-                                            //   }
-                                            // } catch (e, stackTrace) {
-                                            //   throw Exception("$e: $stackTrace");
-                                            // } 
-
-                                          } : null, 
-                                          child: Text('Start chat')
-                                        ),
+                                      Text(
+                                        switch(newChatError) {
+                                          NetworkError _ => "Network exception, please try again",
+                                          ServerError e => e.message,
+                                          _ => 'Unexcepted error'
+                                        }
                                       ),
-                                    ]
+                                    ],
+                                  ) : null,
+                                  hint: Text(
+                                    'Paste ID here…',
+                                    style: textStyle.labelLarge?.copyWith(
+                                      color: userIdFocuseNode.hasFocus && newChatError == null ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.75)
+                                    )
                                   ),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextButton(
-                                          onPressed: () => Navigator.pop(ctx), 
-                                          child: Text('Cancel')
-                                        )
-                                      )
-                                    ]
+                                  prefixIcon: Icon(
+                                    Icons.search,
+                                    color: userIdFocuseNode.hasFocus && newChatError == null ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.75)
+                                  ),
+                                ),
+                                focusNode: userIdFocuseNode,
+                                controller: userIdController,
+                              ),
+                              const Divider(),
+                              Text(
+                                'Your ID — share this with others so they can find you',
+                                style: textStyle.labelLarge?.copyWith(
+                                  color: colorScheme.onSurface.withValues(alpha: 0.75)
+                                )
+                              ),
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    maxRadius: 16,
+                                    backgroundColor: colorScheme.tertiaryContainer,
+                                    foregroundColor: colorScheme.onTertiaryContainer.withValues(alpha: 0.75),
+                                    child: Icon(
+                                      Icons.person_outline,
+                                      size: 20
+                                    )
+                                  ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    width: size.width > size.height ? size.height/2 : size.width/2,
+                                    child: Text(
+                                      user.id,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textStyle.bodyLarge?.copyWith(
+                                        color: colorScheme.onSurface.withValues(alpha: 0.4)
+                                      ),
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  OutlinedButton(
+                                    onPressed: () => Clipboard.setData(ClipboardData(text: user.id)),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: colorScheme.onSurface.withValues(alpha: 0.5),
+                                      textStyle:  textStyle.labelSmall,
+                                      padding: EdgeInsets.zero
+                                    ),
+                                    child: Row(
+                                      spacing: 3,
+                                      children: [
+                                        Icon(
+                                          Icons.copy,
+                                          size: 14,
+                                        ),
+                                        Text('Copy')
+                                      ]
+                                    )
                                   )
-                                ]
+                                ],
+                              ),
+                              Container(
+                                alignment: Alignment.bottomCenter,
+                                child: Column(
+                                  spacing: 6,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton(
+                                            onPressed: !isClicked && userIdController.text.isNotEmpty ? () async {
+                                              setState(() => isClicked = true);
+                                              final Exception? error = await context.read<WebsocketProvider>().sendData(
+                                                '',
+                                                () async {
+                                                  Navigator.pop(context);
+                                                }
+                                              );
+                                              if(error != null) {
+                                                switch(error) {
+                                                  case final WebSocketChannelException _ || final SocketException _:
+                                                    newChatError = NetworkError();
+                                                  case final ServerException e:
+                                                    newChatError = ServerError(message: e.message);
+                                                }
+                                              }
+                                              setState(() => isClicked = false);
+                                            } : null, 
+                                            child: Text('Start chat')
+                                          ),
+                                        ),
+                                      ]
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextButton(
+                                            onPressed: () => Navigator.pop(context), 
+                                            child: Text('Cancel')
+                                          )
+                                        )
+                                      ]
+                                    )
+                                  ]
+                                )
                               )
-                            )
-                          ],
-                        )
-                      ),
+                            ],
+                          )
+                        );
+                      }
                       );
                     }
                   );

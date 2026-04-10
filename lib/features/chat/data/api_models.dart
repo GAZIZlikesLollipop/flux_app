@@ -1,9 +1,20 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flux_app/core/database/user_model.dart';
+
+abstract class RequestData{
+  final String type;
+  RequestData({required this.type});
+}
+
+class NewChatData extends RequestData {
+  final ChatDTO chat;
+  NewChatData({required super.type,required this.chat});
+}
 
 class Request {
   final String receiverID;
-  final Uint8List data;
+  final RequestData data;
   const Request({
     required this.receiverID,
     required this.data
@@ -23,4 +34,16 @@ class Response {
   Response.fromJson(Map<String, dynamic> json)
   : senderID = json['sender_id'] as String,
     data = json['data'] as Uint8List;
+}
+
+class ServerException implements Exception {
+  final String message;
+  ServerException({required this.message});
+}
+
+sealed class ConnectionError {}
+class NetworkError extends ConnectionError {}
+class ServerError extends ConnectionError {
+  final String message;
+  ServerError({required this.message});
 }
