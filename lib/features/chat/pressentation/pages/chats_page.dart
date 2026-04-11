@@ -1,12 +1,13 @@
-import 'dart:io';
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flux_app/core/database/app_database.dart';
 import 'package:flux_app/core/database/drift_provider.dart';
+import 'package:flux_app/core/database/user_model.dart';
 import 'package:flux_app/features/chat/data/api_models.dart';
 import 'package:flux_app/features/chat/data/websocket_provider.dart';
+import 'package:flux_app/features/chat/pressentation/pages/chat_page.dart';
+import 'package:flux_app/features/chat/pressentation/widgets/new_chat_card.dart';
 import 'package:provider/provider.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../widgets/chat_card.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -16,34 +17,74 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class ChatListState extends State<ChatListScreen> {
-  final userIdController = TextEditingController();
-  final FocusNode userIdFocuseNode = FocusNode();
-  bool isClicked = false;
-  ConnectionError? newChatError;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_){
-      final userId = context.read<DriftProider>().user?.id;
-      if(userId != null){
-        context.read<WebsocketProvider>().initChannel(userId);
+      final user = context.read<DriftProider>().user;
+      if(user != null){
+        context.read<WebsocketProvider>().initChannel(
+          user.id,
+          (dt) {
+            try {
+              final ServerResp resp = ServerResp.fromJson(jsonDecode(dt) as Map<String,dynamic>);
+              switch(resp.data){
+                case NewChatData chatData:
+                  if(chatData.type == ServerData.newChatReq) {
+                    context.read<WebsocketProvider>().sendData(
+                      ServerReq(
+                        receiverID: resp.senderID, 
+                        data: NewChatData(
+                          type: ServerData.newChatReq,
+                          chat: Chat(
+                            id: resp.senderID, 
+                            userId: resp.senderID, 
+                            title: user.name, 
+                            lastOnline: user.lastOnline, 
+                            avatarPath: user.avatarPath
+                          ), 
+                        )
+                      ).toJson(),
+                    );
+                  }
+                  final Chat newChat = chatData.chat;
+                  context.read<DriftProider>().createNewChat(newChat);
+                  if(context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          chatInfo: ChatDTO(
+                            id: newChat.id, 
+                            userId: newChat.userId, 
+                            title: newChat.title, 
+                            lastOnline: newChat.lastOnline, 
+                            avatarPath: newChat.avatarPath, 
+                            messages: []
+                          )
+                        )
+                      )
+                    );
+                  }
+              }
+            } on FormatException catch(_) {
+              context.read<WebsocketProvider>().changeNewChatError(ServerError(message: dt));
+            } on TypeError catch(_) {
+              context.read<WebsocketProvider>().changeNewChatError(ServerError(message: dt));
+            } finally {
+              context.read<WebsocketProvider>().changeClicked(false);
+            }
+          }
+        );
       } else {
         throw Exception("User id is null");
       }
     });
   }
   @override
-  void dispose() {
-    userIdController.dispose();
-    userIdFocuseNode.dispose();
-    super.dispose();
-  }
-  @override
   Widget build(BuildContext context) {
     final user = context.watch<DriftProider>().user;
     final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final TextTheme textStyle = theme.textTheme;
     return Scaffold(
       appBar: AppBar(
         title: Text('Flux'),
@@ -87,175 +128,7 @@ class ChatListState extends State<ChatListScreen> {
                     context: context, 
                     isScrollControlled: true,
                     builder: (BuildContext ctx) {
-                      final Size size = MediaQuery.of(ctx).size;
-                      return StatefulBuilder(
-                        builder:(context, setState) { 
-                          userIdFocuseNode.addListener((){
-                            if(!context.mounted){
-                              userIdFocuseNode.removeListener((){});
-                            }
-                            setState((){});
-                          });
-                          return Padding(
-                            padding: EdgeInsetsGeometry.directional(
-                              start: 24,
-                              end:  24,
-                              bottom: MediaQuery.of(context).viewInsets.bottom+16
-                            ),
-                            child: Column(
-                            spacing: 12,
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'New chat',
-                                    style: textStyle.titleMedium
-                                  ),
-                                  Text(
-                                    'Paste or type the person\'s ID below',
-                                    style: textStyle.labelLarge?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5))
-                                  ),
-                                ]
-                              ),
-                              TextField(
-                                autofocus: true,
-                                onChanged: (_) => setState((){}),
-                                decoration: InputDecoration(
-                                  error: newChatError != null ? Row(
-                                    spacing: 5,
-                                    children: [
-                                      Icon(
-                                        Icons.error_outline,
-                                        color: colorScheme.error,
-                                        size: 14,
-                                      ),
-                                      Text(
-                                        switch(newChatError) {
-                                          NetworkError _ => "Network exception, please try again",
-                                          ServerError e => e.message,
-                                          _ => 'Unexcepted error'
-                                        }
-                                      ),
-                                    ],
-                                  ) : null,
-                                  hint: Text(
-                                    'Paste ID here…',
-                                    style: textStyle.labelLarge?.copyWith(
-                                      color: userIdFocuseNode.hasFocus && newChatError == null ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.75)
-                                    )
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: userIdFocuseNode.hasFocus && newChatError == null ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.75)
-                                  ),
-                                ),
-                                focusNode: userIdFocuseNode,
-                                controller: userIdController,
-                              ),
-                              const Divider(),
-                              Text(
-                                'Your ID — share this with others so they can find you',
-                                style: textStyle.labelLarge?.copyWith(
-                                  color: colorScheme.onSurface.withValues(alpha: 0.75)
-                                )
-                              ),
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    maxRadius: 16,
-                                    backgroundColor: colorScheme.tertiaryContainer,
-                                    foregroundColor: colorScheme.onTertiaryContainer.withValues(alpha: 0.75),
-                                    child: Icon(
-                                      Icons.person_outline,
-                                      size: 20
-                                    )
-                                  ),
-                                  const SizedBox(width: 12),
-                                  SizedBox(
-                                    width: size.width > size.height ? size.height/2 : size.width/2,
-                                    child: Text(
-                                      user.id,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: textStyle.bodyLarge?.copyWith(
-                                        color: colorScheme.onSurface.withValues(alpha: 0.4)
-                                      ),
-                                    ),
-                                  ),
-                                  Spacer(),
-                                  OutlinedButton(
-                                    onPressed: () => Clipboard.setData(ClipboardData(text: user.id)),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: colorScheme.onSurface.withValues(alpha: 0.5),
-                                      textStyle:  textStyle.labelSmall,
-                                      padding: EdgeInsets.zero
-                                    ),
-                                    child: Row(
-                                      spacing: 3,
-                                      children: [
-                                        Icon(
-                                          Icons.copy,
-                                          size: 14,
-                                        ),
-                                        Text('Copy')
-                                      ]
-                                    )
-                                  )
-                                ],
-                              ),
-                              Container(
-                                alignment: Alignment.bottomCenter,
-                                child: Column(
-                                  spacing: 6,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: ElevatedButton(
-                                            onPressed: !isClicked && userIdController.text.isNotEmpty ? () async {
-                                              setState(() => isClicked = true);
-                                              final Exception? error = await context.read<WebsocketProvider>().sendData(
-                                                '',
-                                                () async {
-                                                  Navigator.pop(context);
-                                                }
-                                              );
-                                              if(error != null) {
-                                                switch(error) {
-                                                  case final WebSocketChannelException _ || final SocketException _:
-                                                    newChatError = NetworkError();
-                                                  case final ServerException e:
-                                                    newChatError = ServerError(message: e.message);
-                                                }
-                                              }
-                                              setState(() => isClicked = false);
-                                            } : null, 
-                                            child: Text('Start chat')
-                                          ),
-                                        ),
-                                      ]
-                                    ),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextButton(
-                                            onPressed: () => Navigator.pop(context), 
-                                            child: Text('Cancel')
-                                          )
-                                        )
-                                      ]
-                                    )
-                                  ]
-                                )
-                              )
-                            ],
-                          )
-                        );
-                      }
-                      );
+                      return NewChatCard(user: user);
                     }
                   );
                 }, 

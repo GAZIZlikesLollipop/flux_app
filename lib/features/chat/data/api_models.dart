@@ -1,44 +1,66 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:flux_app/core/database/user_model.dart';
+import 'package:flux_app/core/database/app_database.dart';
 
-abstract class RequestData{
+abstract class ServerData{
+  static const String newChatReq = 'newChatReq';
+  static const String newChatResp = 'newChatResp';
   final String type;
-  RequestData({required this.type});
+  ServerData({required this.type});
+  ServerData.fromJson(Map<String,dynamic> json): type = json['type'];
+  Map<String, dynamic> toJson() {
+    return {'type': type};
+  }
 }
 
-class NewChatData extends RequestData {
-  final ChatDTO chat;
-  NewChatData({required super.type,required this.chat});
+class NewChatData extends ServerData {
+  final Chat chat;
+  NewChatData({
+    required super.type,
+    required this.chat,
+  });
+  NewChatData.fromJson(super.json): chat = Chat.fromJson(json['chat'] as Map<String, dynamic>), super.fromJson();
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'chat': chat.toJson()
+    };
+  }
 }
 
-class Request {
+class ServerReq {
   final String receiverID;
-  final RequestData data;
-  const Request({
+  final ServerData data;
+  const ServerReq({
     required this.receiverID,
     required this.data
   });
   String toJson() {
-    return jsonEncode({'receiver_id': receiverID,'data': data});
+    final Map<String,dynamic> jsonMap = {
+      'receiver_id': receiverID,
+      'data': utf8.encode(json.encode(data.toJson()))
+    };
+    return jsonEncode(jsonMap);
   }
 }
 
-class Response {
+class ServerResp {
   final String senderID;
-  final Uint8List data;
-  const Response({
+  final ServerData data;
+  const ServerResp({
     required this.senderID,
     required this.data
   });
-  Response.fromJson(Map<String, dynamic> json)
-  : senderID = json['sender_id'] as String,
-    data = json['data'] as Uint8List;
-}
-
-class ServerException implements Exception {
-  final String message;
-  ServerException({required this.message});
+  static ServerData _parseData(Map<String, dynamic> json) {
+    final jsonData = jsonDecode(utf8.decode(base64.decode(json['data'] as String))) as Map<String, dynamic>;
+    return switch(jsonData['type']){
+      ServerData.newChatReq || ServerData.newChatResp => NewChatData.fromJson(jsonData), 
+      _ => throw UnimplementedError()
+    };
+  }
+  ServerResp.fromJson(Map<String, dynamic> json)
+    : senderID = json['sender_id'] as String,
+    data = _parseData(json);
 }
 
 sealed class ConnectionError {}

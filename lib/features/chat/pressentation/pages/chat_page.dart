@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flux_app/core/database/user_model.dart';
+import 'package:flux_app/features/chat/pressentation/pages/chats_page.dart';
 
 class ChatScreen extends StatelessWidget {
   final ChatDTO chatInfo;
@@ -16,7 +17,7 @@ class ChatScreen extends StatelessWidget {
         backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         leading: IconButton(
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.push(context,MaterialPageRoute(builder: (_) => ChatListScreen()));
           },
           icon: Icon(Icons.arrow_back)
         ),
