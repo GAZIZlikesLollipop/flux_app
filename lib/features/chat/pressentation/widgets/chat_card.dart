@@ -1,10 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import '../../../../core/database/user_model.dart';
+import 'package:flux_app/core/database/app_database.dart';
 import '../pages/chat_page.dart';
 
 class ChatCard extends StatelessWidget {
   final bool isDivider;
-  final ChatDTO chatInfo;
+  final Chat chatInfo;
   const ChatCard({
     super.key,
     required this.chatInfo,
@@ -21,7 +23,7 @@ class ChatCard extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder:(ctx) => ChatScreen(chatInfo: chatInfo)),
+                MaterialPageRoute(builder:(ctx) => ChatScreen(chatId: chatInfo.id)),
               );
             },
             child: Card(
@@ -39,8 +41,8 @@ class ChatCard extends StatelessWidget {
                       width: 60,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(50),
-                        child: Image.network(
-                          chatInfo.avatarPath,
+                        child: Image.file(
+                          File(chatInfo.avatarPath),
                           fit: BoxFit.cover,
                         ),
                       )
@@ -51,7 +53,7 @@ class ChatCard extends StatelessWidget {
                         children: [
                           Text(chatInfo.title),
                           Text(
-                            chatInfo.lastMessage.content,
+                            chatInfo.lastMessageContent,
                             style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5))
                           ),
                         ],
@@ -60,18 +62,18 @@ class ChatCard extends StatelessWidget {
                     Column(
                       children: [
                         Text(
-                          "${chatInfo.lastMessage.createdAt.hour < 10 ? 0 : ""}${chatInfo.lastMessage.createdAt.hour}:${chatInfo.lastMessage.createdAt.minute < 10 ? 0 : ""}${chatInfo.lastMessage.createdAt.minute}",
+                          "${chatInfo.lastMessageCreatedAt.hour < 10 ? 0 : ""}${chatInfo.lastMessageCreatedAt.hour}:${chatInfo.lastMessageCreatedAt.minute < 10 ? 0 : ""}${chatInfo.lastMessageCreatedAt.minute}",
                           style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75))
                         ),
                         SizedBox(height: 4),
-                        if (chatInfo.unreadMessages > 0) ...[
+                        if (!chatInfo.lastMessageIsReaded) ...[
                           Card(
                             shape: CircleBorder(),
                             child: Padding(
-                              padding: EdgeInsets.all(6),
+                              padding: EdgeInsets.all(8),
                               child: Text(
-                                chatInfo.unreadMessages.toString(),
-                                style: theme.textTheme.labelLarge
+                                '●',
+                                style: theme.textTheme.labelLarge?.copyWith(fontSize: 10)
                               )
                             )
                           ),

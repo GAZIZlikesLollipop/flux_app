@@ -1,12 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flux_app/core/database/app_database.dart';
 import 'package:flux_app/core/database/drift_provider.dart';
-import 'package:flux_app/core/database/user_model.dart';
 import 'package:flux_app/features/chat/data/api_models.dart';
 import 'package:flux_app/features/chat/data/websocket_provider.dart';
 import 'package:flux_app/features/chat/pressentation/pages/chat_page.dart';
 import 'package:flux_app/features/chat/pressentation/widgets/new_chat_card.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../widgets/chat_card.dart';
 
@@ -21,11 +22,14 @@ class ChatListState extends State<ChatListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_){
-      final user = context.read<DriftProider>().user;
-      if(user != null){
+      final user = context.read<DriftProvider>().user;
+      if(
+        user != null &&
+        context.read<WebsocketProvider>().channel == null
+      ){
         context.read<WebsocketProvider>().initChannel(
           user.id,
-          (dt) {
+          (dt) async {
             try {
               final ServerResp resp = ServerResp.fromJson(jsonDecode(dt) as Map<String,dynamic>);
               switch(resp.data){
@@ -35,37 +39,43 @@ class ChatListState extends State<ChatListScreen> {
                       ServerReq(
                         receiverID: resp.senderID, 
                         data: NewChatData(
-                          type: ServerData.newChatReq,
+                          type: ServerData.newChatResp,
                           chat: Chat(
-                            id: resp.senderID, 
+                            id: user.id, 
                             userId: resp.senderID, 
                             title: user.name, 
                             lastOnline: user.lastOnline, 
-                            avatarPath: user.avatarPath
+                            avatarPath: base64Encode(File(user.avatarPath).readAsBytesSync()),
+                            lastMessageContent: 'No messages',
+                            lastMessageCreatedAt: DateTime.now(),
+                            lastMessageIsReaded: false
                           ), 
                         )
                       ).toJson(),
                     );
                   }
-                  final Chat newChat = chatData.chat;
-                  context.read<DriftProider>().createNewChat(newChat);
-                  if(context.mounted) {
+                  Chat newChat = chatData.chat;
+                  if(await context.read<DriftProvider>().getChatById(newChat.id) == null) {
+                    final dir = await getApplicationDocumentsDirectory();
+                    final file = File('${dir.path}/${newChat.id}-avatar.jpg');
+                    await file.writeAsBytes(base64Decode(newChat.avatarPath));
+                    newChat = newChat.copyWith(avatarPath: file.path);
+                    context.read<DriftProvider>().createNewChat(newChat);
+                  }
+                  if(
+                    context.mounted && 
+                    resp.data.type == ServerData.newChatResp
+                  ) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          chatInfo: ChatDTO(
-                            id: newChat.id, 
-                            userId: newChat.userId, 
-                            title: newChat.title, 
-                            lastOnline: newChat.lastOnline, 
-                            avatarPath: newChat.avatarPath, 
-                            messages: []
-                          )
-                        )
+                        builder: (_) => ChatScreen(chatId: newChat.id)
                       )
                     );
                   }
+                case MessageData msgData:
+                  print('Poluchil!: $dt');
+                  await context.read<DriftProvider>().createMessage(msgData.message.toCompanion(true));
               }
             } on FormatException catch(_) {
               context.read<WebsocketProvider>().changeNewChatError(ServerError(message: dt));
@@ -83,7 +93,7 @@ class ChatListState extends State<ChatListScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<DriftProider>().user;
+    final user = context.watch<DriftProvider>().user;
     final ThemeData theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(

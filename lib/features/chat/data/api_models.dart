@@ -4,6 +4,7 @@ import 'package:flux_app/core/database/app_database.dart';
 abstract class ServerData{
   static const String newChatReq = 'newChatReq';
   static const String newChatResp = 'newChatResp';
+  static const String sendMessage = 'sendMessage';
   final String type;
   ServerData({required this.type});
   ServerData.fromJson(Map<String,dynamic> json): type = json['type'];
@@ -24,6 +25,22 @@ class NewChatData extends ServerData {
     return {
       'type': type,
       'chat': chat.toJson()
+    };
+  }
+}
+
+class MessageData extends ServerData {
+  final Message message;
+  MessageData({
+    required super.type,
+    required this.message
+  });
+  MessageData.fromJson(super.json): message = Message.fromJson(json['message'] as Map<String, dynamic>), super.fromJson();
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'message': message.toJson()
     };
   }
 }
@@ -55,6 +72,7 @@ class ServerResp {
     final jsonData = jsonDecode(utf8.decode(base64.decode(json['data'] as String))) as Map<String, dynamic>;
     return switch(jsonData['type']){
       ServerData.newChatReq || ServerData.newChatResp => NewChatData.fromJson(jsonData), 
+      ServerData.sendMessage => MessageData.fromJson(jsonData),
       _ => throw UnimplementedError()
     };
   }

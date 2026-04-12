@@ -10,12 +10,25 @@ part 'app_database.g.dart';
 @DriftDatabase(tables: [Users, Chats, Messages])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+  Stream<List<Chat>> get chatsChan => select(chats).watch();
+  Stream<Chat> chatChan(String chatId) => (select(chats)..where((tbl) => tbl.id.equals(chatId))).watchSingle();
+  Stream<List<Message>> msgsChan(String chatId) => (select(messages)..where((tbl) => tbl.chatId.equals(chatId))..orderBy([(t) => OrderingTerm.asc(t.createdAt)])).watch();
+
   Future<List<User>> get getUsers => select(users).get(); 
-  Future<List<Chat>> get getChats => select(chats).get(); 
-  Future<List<Message>> getChatMessages(String chatId) => (select(messages)..where((tbl) => tbl.chatId.equals(chatId))).get(); 
+  Future<Chat?> chatByID(String chatId) => (select(chats)..where((tbl) => tbl.id.equals(chatId))).getSingleOrNull();
+
   Future<int> createUser(User user) => into(users).insert(user);
   Future<int> createChat(Chat chat) => into(chats).insert(chat);
-  Future<int> updateChat(ChatsCompanion chat) => update(chats).write(chat);
+  Future<Message> createMessage(MessagesCompanion msg) async {
+    await (update(chats)..where((tbl) => tbl.id.equals(msg.chatId.value)))
+    .write(ChatsCompanion(
+      lastMessageContent: msg.content,
+      lastMessageCreatedAt: msg.createdAt,
+      lastMessageIsReaded: msg.isReaded,
+    ));
+    final int msgId = await into(messages).insert(msg);
+    return (select(messages)..where((tbl) => tbl.id.equals(msgId))).getSingle();
+  }
   @override
   int get schemaVersion => 1;
 }

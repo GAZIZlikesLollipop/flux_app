@@ -11,7 +11,7 @@ void main(){
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DriftProider(db: database)),
+        ChangeNotifierProvider(create: (_) => DriftProvider(db: database)),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => WebsocketProvider())
       ],

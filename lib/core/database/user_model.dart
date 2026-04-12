@@ -20,6 +20,10 @@ class Chats extends Table {
   DateTimeColumn get lastOnline => dateTime()();
   TextColumn get avatarPath => text()();
 
+  TextColumn get lastMessageContent => text()();
+  BoolColumn get lastMessageIsReaded => boolean()();
+  DateTimeColumn get lastMessageCreatedAt => dateTime().withDefault(currentDateAndTime)();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -38,7 +42,7 @@ class UserDTO {
   final String name;
   final DateTime lastOnline;
   final String avatarPath;
-  final List<ChatDTO> chats;
+  final List<Chat> chats;
   const UserDTO({
     required this.id,
     required this.name,
@@ -46,41 +50,16 @@ class UserDTO {
     required this.avatarPath,
     required this.chats
   });
-}
-
-class ChatDTO {
-  final String id;
-  final String userId;
-  final String title;
-  final DateTime lastOnline;
-  final String avatarPath;
-  final List<Message> messages;
-  const ChatDTO({
-    required this.id,
-    required this.userId,
-    required this.title,
-    required this.lastOnline,
-    required this.avatarPath,
-    required this.messages
-  });
-
-  Message get lastMessage => 
-    messages.isEmpty ? Message(
-        id: 0, 
-        chatId: id, 
-        content: 'No messages yet', 
-        isReaded: false, 
-        createdAt: DateTime.now()
-      ) 
-      : messages[messages.length-1];
-
-  int get unreadMessages { 
-    int readed = 0;
-    if(messages.isNotEmpty){
-      for(final msg in messages){
-        if(msg.isReaded) readed++;
-      }
-    }
-    return readed;
-  }
+  UserDTO copyWith({
+    String? name,
+    DateTime? lastOnline,
+    String? avatarPath,
+    List<Chat>? chats
+  }) => UserDTO(
+    id: id, 
+    name: name ?? this.name, 
+    lastOnline: lastOnline ?? this.lastOnline, 
+    avatarPath: avatarPath ?? this.avatarPath, 
+    chats: chats ?? this.chats
+  ); 
 }

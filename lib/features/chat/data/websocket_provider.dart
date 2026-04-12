@@ -19,6 +19,7 @@ class WebsocketProvider extends ChangeNotifier {
     _newChatError = cnnErr;
     notifyListeners();
   }
+
   void initChannel(
     String userId,
     Function(dynamic data) callback

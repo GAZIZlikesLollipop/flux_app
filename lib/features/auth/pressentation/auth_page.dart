@@ -19,8 +19,7 @@ class AuthPageState extends State<AuthPage> {
   void initState(){
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_)async{
-      if(await context.read<DriftProider>().isRegistered()) {
-        await context.read<DriftProider>().loadUser();
+      if(await context.read<DriftProvider>().isRegistered()) {
         Navigator.push(context, MaterialPageRoute(builder: (_) => ChatListScreen()));
       }
     });
@@ -108,7 +107,7 @@ class AuthPageState extends State<AuthPage> {
             onPressed: () async {
               if(usernameController.text.isNotEmpty && photoPath != null && !isNextClicked) {
                 isNextClicked = true;
-                await context.read<DriftProider>().createUser(usernameController.text, photoPath);
+                await context.read<DriftProvider>().createUser(usernameController.text, photoPath);
                 if(context.mounted) {
                   Navigator.push(context,MaterialPageRoute(builder: (ctx) => ChatListScreen()));
                 }

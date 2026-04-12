@@ -4,61 +4,63 @@ import 'package:flux_app/core/database/user_model.dart';
 import 'app_database.dart';
 import 'package:uuid/uuid.dart';
 
-class DriftProider extends ChangeNotifier {
+class DriftProvider extends ChangeNotifier {
   final AppDatabase db; 
-  DriftProider({required this.db});
   UserDTO? _user;
   UserDTO? get user => _user; 
+  DriftProvider({required this.db}){
+    db.chatsChan.listen((dt){
+      if(_user != null) {
+        _user = _user!.copyWith(chats: dt);
+        notifyListeners();
+      }
+    });
+  }
+  Stream<Chat> getChatChan(String chatId) => db.chatChan(chatId);
+  Stream<List<Message>> getMsgsChan(String chatId) => db.msgsChan(chatId);
+  Future<Message> createMessage(MessagesCompanion msg) async => await db.createMessage(msg);
+  void updateUser(User userData) {
+    if(_user != null) {
+      _user = _user!.copyWith(
+        name: userData.name,
+        lastOnline: userData.lastOnline,
+        avatarPath: userData.avatarPath
+      );
+    } else {
+      _user = UserDTO(
+        id: userData.id,
+        name: userData.name,
+        lastOnline: userData.lastOnline,
+        avatarPath: userData.avatarPath,
+        chats: List.empty(growable: true)
+      );
+    }
+    notifyListeners();
+  }
   Future<bool> isRegistered() async {
-    return (await db.getUsers).isNotEmpty;
+    List<User> users = await db.getUsers;
+    if(users.isNotEmpty){
+      updateUser(users[0]);
+    }
+    return users.isNotEmpty;
   }
   Future<String> createUser(
     String userName,
     String photoPath
   ) async {
     final String userId = Uuid().v4();
-    final User user = User(
+    final User userData = User(
       id: userId,
       name: userName,
       lastOnline: DateTime.now(),
       avatarPath: photoPath,
     );
-    await db.createUser(user);
-    _user = UserDTO(
-      id: user.id, 
-      name: user.name, 
-      lastOnline: user.lastOnline, 
-      avatarPath: user.avatarPath, 
-      chats: List.empty(growable: true)
-    );
+    await db.createUser(userData);
+    updateUser(userData);
     return userId;
   }
-  Future<String> loadUser() async {
-    List<User> users = (await db.getUsers);
-    late User userData = users[0];
-    List<ChatDTO> chatsData = List.empty(growable: true);
-    for(var chat in await db.getChats) {
-      final List<Message> messages = await db.getChatMessages(chat.id);
-      chatsData.add(
-        ChatDTO(
-          id: chat.id, 
-          userId: chat.userId, 
-          title: chat.title, 
-          lastOnline: chat.lastOnline, 
-          avatarPath: chat.avatarPath, 
-          messages: messages
-        )
-      );
-    }
-    _user = UserDTO(
-      id: userData.id, 
-      name: userData.name, 
-      lastOnline: userData.lastOnline, 
-      avatarPath: userData.avatarPath, 
-      chats: chatsData
-    );
-    notifyListeners();
-    return userData.id;
+  Future<Chat?> getChatById(String chatId) async {
+    return await db.chatByID(chatId);
   }
   Future<int?> createNewChat(Chat chat) async {
     int? result;
@@ -67,6 +69,7 @@ class DriftProider extends ChangeNotifier {
     } on SqliteException catch(_) {
       result = null;
     }
+    notifyListeners();
     return result;
   }
 }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flux_app/core/database/app_database.dart';
@@ -170,7 +173,10 @@ class NewChatCardState extends State<NewChatCard> {
                                   userId: userIdController.text, 
                                   title: user.name, 
                                   lastOnline: user.lastOnline, 
-                                  avatarPath: user.avatarPath
+                                  avatarPath: base64Encode(File(user.avatarPath).readAsBytesSync()),
+                                  lastMessageContent: 'No messages',
+                                  lastMessageCreatedAt: DateTime.now(),
+                                  lastMessageIsReaded: false
                                 ), 
                               )
                             ).toJson(),
