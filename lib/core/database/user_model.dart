@@ -32,6 +32,7 @@ class Chats extends Table {
 class Messages extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get chatId => text().references(Chats, #id)(); 
+  TextColumn get senderId => text()();
   TextColumn get content => text()();
   BoolColumn get isReaded => boolean()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();

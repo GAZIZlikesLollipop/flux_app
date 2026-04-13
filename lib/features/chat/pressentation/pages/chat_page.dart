@@ -7,6 +7,7 @@ import 'package:flux_app/core/database/drift_provider.dart';
 import 'package:flux_app/features/chat/data/api_models.dart';
 import 'package:flux_app/features/chat/data/websocket_provider.dart';
 import 'package:flux_app/features/chat/pressentation/pages/chats_page.dart';
+import 'package:flux_app/features/chat/pressentation/widgets/message_card.dart';
 import 'package:provider/provider.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -21,6 +22,14 @@ class ChatScreen extends StatefulWidget {
 
 class ChatScreenState extends State<ChatScreen> {
   final messageController = TextEditingController();
+  final scrollController = ScrollController();
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addPostFrameCallback((_){
+  //     scrollController.jumpTo(scrollController.position.maxScrollExtent);
+  //   });
+  // }
   @override
   void dispose() {
     messageController.dispose();
@@ -102,8 +111,9 @@ class ChatScreenState extends State<ChatScreen> {
                   messages.isNotEmpty ?
                   ListView.builder(
                     itemCount: messages.length,
+                    controller: scrollController,
                     itemBuilder: (ctx,ind) {
-                      return Text(messages[ind].content);
+                      return MessageCard(message: messages[ind],userId: chatInfo.userId);
                     }
                   ) :
                   Center(child: Text('No messages yet, send the first one!')): 
@@ -139,10 +149,12 @@ class ChatScreenState extends State<ChatScreen> {
                         chatId: Value(widget.chatId), 
                         content: Value(messageController.text), 
                         isReaded: Value(false), 
+                        senderId: Value(chatInfo.userId),
                         createdAt: Value(DateTime.now())
                       );
                       messageController.clear();
-                      final Message msg = await context.read<DriftProvider>().createMessage(message);
+                      Message msg = await context.read<DriftProvider>().createMessage(message);
+                      msg = msg.copyWith(chatId: chatInfo.userId);
                       if(context.mounted) {
                         context.read<WebsocketProvider>().sendData(
                           ServerReq(

@@ -74,7 +74,6 @@ class ChatListState extends State<ChatListScreen> {
                     );
                   }
                 case MessageData msgData:
-                  print('Poluchil!: $dt');
                   await context.read<DriftProvider>().createMessage(msgData.message.toCompanion(true));
               }
             } on FormatException catch(_) {

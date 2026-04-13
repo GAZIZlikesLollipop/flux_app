@@ -1,17 +1,183 @@
-# flux_app
+> ⚠️ **Внимание:** Flux App — это **прототип** в активной разработке. Проект **не готов к использованию в продакшене**. API, структура и функциональность могут кардинально измениться.
 
-A new Flutter project.
+<div align="center">
 
-## Getting Started
+# ⚡ Flux App
 
-This project is a starting point for a Flutter application.
+**Мобильный мессенджер на Flutter с real-time общением через WebSocket**
 
-A few resources to get you started if this is your first Flutter project:
+![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Status](https://img.shields.io/badge/Статус-Прототип-orange?style=for-the-badge)
+![License](https://img.shields.io/badge/Лицензия-MIT-green?style=for-the-badge)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+</div>
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 📖 О проекте
+
+**Flux App** — клиентская часть мессенджера Flux. Написана на Flutter с использованием архитектурного паттерна **Provider** для управления состоянием. Общение между пользователями происходит в реальном времени через WebSocket-соединение с сервером [Flux Core](../flux-core).
+
+Сервер выступает исключительно как посредник — он не хранит сообщения и не обрабатывает бизнес-логику. Вся логика хранения данных сосредоточена на клиенте с использованием локальной SQLite-базы через **Drift**.
+
+---
+
+## ✨ Функциональность
+
+- 🔐 **Регистрация профиля** — выбор имени пользователя и фото из галереи
+- 💬 **Список чатов** — отображение всех диалогов с последним сообщением
+- 📨 **Real-time переписка** — мгновенная отправка и получение сообщений через WebSocket
+- 🤝 **Добавление новых контактов** — запрос на создание чата по User ID собеседника
+- 💾 **Локальное хранилище** — все данные (чаты, сообщения, профиль) хранятся в SQLite на устройстве
+- 🌗 **Тёмная/светлая тема** — автоматически подстраивается под системную тему
+
+---
+
+## 🏗️ Архитектура
+
+```
+lib/
+├── main.dart                         # Точка входа, инициализация провайдеров
+├── core/
+│   ├── app.dart                      # Корневой виджет приложения
+│   ├── theme.dart                    # Светлая и тёмная темы
+│   └── database/
+│       ├── app_database.dart         # Drift база данных (Users, Chats, Messages)
+│       ├── app_database.g.dart       # Сгенерированный код Drift
+│       ├── drift_provider.dart       # Provider для работы с БД
+│       └── user_model.dart           # Модели таблиц и DTO
+└── features/
+    ├── auth/
+    │   ├── data/
+    │   │   └── auth_provider.dart    # Провайдер для авторизации (выбор фото)
+    │   └── pressentation/
+    │       └── auth_page.dart        # Страница регистрации профиля
+    └── chat/
+        ├── data/
+        │   ├── api_models.dart       # Модели данных для WebSocket API
+        │   └── websocket_provider.dart # Провайдер WebSocket-соединения
+        └── pressentation/
+            ├── pages/
+            │   ├── chats_page.dart   # Страница списка чатов
+            │   └── chat_page.dart    # Страница переписки
+            └── widgets/
+                ├── chat_card.dart    # Карточка чата в списке
+                ├── message_card.dart # Карточка сообщения
+                └── new_chat_card.dart # Форма добавления нового чата
+```
+
+### Управление состоянием
+
+Приложение использует три `ChangeNotifierProvider`:
+
+| Провайдер | Зона ответственности |
+|---|---|
+| `DriftProvider` | Работа с локальной БД, профиль пользователя |
+| `AuthProvider` | Процесс регистрации, выбор фото |
+| `WebsocketProvider` | WebSocket-соединение, отправка и получение данных |
+
+---
+
+## 🔌 WebSocket протокол
+
+Обмен данными между клиентом и сервером происходит через JSON-сообщения. Полезная нагрузка (`data`) передаётся в формате base64.
+
+**Типы сообщений:**
+
+| Тип | Описание |
+|---|---|
+| `newChatReq` | Запрос на создание нового чата |
+| `newChatResp` | Ответ на запрос создания чата |
+| `sendMessage` | Отправка сообщения |
+
+**Структура запроса:**
+```json
+{
+  "receiver_id": "user-id-получателя",
+  "data": "<base64-encoded JSON>"
+}
+```
+
+---
+
+## 🚀 Запуск
+
+### Требования
+
+- Flutter SDK `>=3.0.0`
+- Dart SDK `>=3.0.0`
+- Запущенный сервер [Flux Core](../flux-core) (по умолчанию `ws://127.0.0.1:8080`)
+
+### Установка зависимостей
+
+```bash
+flutter pub get
+```
+
+### Генерация кода Drift
+
+```bash
+dart run build_runner build
+```
+
+### Запуск приложения
+
+```bash
+# С дефолтным адресом сервера (ws://127.0.0.1:8080)
+flutter run
+
+# С кастомным адресом сервера
+flutter run --dart-define=BASE_URL=ws://your-server:8080
+```
+
+---
+
+## 📦 Основные зависимости
+
+| Пакет | Назначение |
+|---|---|
+| `provider` | Управление состоянием |
+| `drift` + `drift_dev` | Локальная SQLite база данных с кодогенерацией |
+| `web_socket_channel` | WebSocket клиент |
+| `image_picker` | Выбор фото из галереи |
+| `path_provider` | Получение путей к директориям на устройстве |
+
+---
+
+## 🗺️ Roadmap
+
+> Данный раздел отражает планируемое направление развития проекта. Приоритеты и сроки могут меняться.
+
+### v0.2 — Стабилизация и UX
+- [ ] Индикатор статуса WebSocket-соединения (онлайн / оффлайн)
+- [ ] Обработка ошибок и отображение уведомлений пользователю
+- [ ] Отображение статуса «доставлено» / «прочитано» для сообщений
+- [ ] Рефакторинг: устранение опечатки `pressentation` → `presentation`
+
+### v0.3 — Медиа и профиль
+- [ ] Отправка изображений и файлов в чат
+- [ ] Редактирование профиля (имя, аватар)
+- [ ] Страница просмотра информации о собеседнике
+
+### v0.4 — Надёжность
+- [ ] Офлайн-очередь сообщений (отправка после восстановления соединения)
+- [ ] Пуш-уведомления о новых сообщениях
+- [ ] Автоматическое переподключение WebSocket
+
+### v1.0 — Релиз
+- [ ] Полное покрытие тестами (unit, widget, integration)
+- [ ] Публикация в Google Play и App Store
+- [ ] Документация для разработчиков
+
+---
+
+## 🤝 Участие в разработке
+
+Проект находится на стадии прототипа — контрибьюции, идеи и баг-репорты приветствуются. Открывайте Issue или Pull Request.
+
+---
+
+<div align="center">
+  Часть проекта <strong>Flux</strong> · Клиентское приложение
+</div>
